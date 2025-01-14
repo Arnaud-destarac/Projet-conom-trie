@@ -90,6 +90,7 @@ dev.print(device= jpeg, file="acf.jpeg", width=600)
 
 Box.test(res, lag = 4, type = c( "Ljung-Box"), fitdf = 4)
 
+##implémenter méthode de Cochrane-Orcutt pour obtenir les coeffs sans autocorrélation
 
 ## HOMOSCEDASTICITE ?
 
@@ -139,14 +140,12 @@ for (j in 1:k) {
 
 library(strucchange)
 
-# Chow (en faisant l'hypothèse d'une rupture à l'observation "point")
-sctest(y ~ x, type = "Chow", point = )
-
 # Chow pas à pas car pas de rupture observée sur le graphe des résidus 
-# Rq: le test commence à 5 car il faut plus d'obersvations que de variables dans chaque sous-période
-for(i in 5:20) {
+# Rq: le test commence à 5 et finit à n-K-1=27 car il faut plus d'obersvations que de variables dans chaque sous-période
+for(i in 5:(n-K-1)) {
   print(sctest(y ~ x, type = "Chow", point = i) )
 }
+
 # pour i = 11, la stats de Fischer est la plus élevée
 
 # Test Cusum
@@ -166,7 +165,7 @@ cumrr <- cumsum(rr)/scr
 c0 = 0.197 # cf table avec ici n-K = 28
 Kp1=K+1
 
-t2 <- ts(Kp1:n)
+t2p <- ts(Kp1:n)
 t2 = c(5:32)
 
 smin <-((t2-K)/(n-K))-c0
@@ -176,39 +175,54 @@ smax <- ((t2-K)/(n-K))+c0
 vec2 <- c(smin, cumrr, smax)
 cusum2 <- matrix(vec2, ncol = 3); 
 matplot(t2, cusum2, type ="l")
-# même interprétation que pour le test de chow, rupture pour i = 11
-# on refait le test pour la régression de 2000 (i=11) à 2021
+# rupture pour i = 10
+# on refait le test pour la régression de 1999 (i=10) à 2021
 
+
+## Test de rupture sur le 2è sous-échantillon
+
+rupture = 10
 #régression
-y_2 = y[11:n]
-x_2 = x[11:n]
-n_2 = length(y_2)
+y_2 = y[rupture:n]
+x_2 = x[rupture:n,1:3]
+n_new = length(y_2)
+
 OLS_2=lm(formula = y_2 ~ x_2)
 summary(OLS_2)
 
 xc_2 = cbind(1,x_2) 
-bhat_2 = OLS_2$coefficients 
-yf_2 = xc_2 %*% bhat_2
-res_2 = y_2 - yf_2
-scr_2 = t(res_2) %*% res_2
+xt_2 = t(xc_2)
+bmco_2 = OLS_2$coefficients 
+ycalc_2 = xc_2 %*% bmco_2
+xtx_2= xt_2 %*% xc_2
+xtx1_2 = solve(xtx_2) 
+u_2=y_2-xc_2%*%bmco_2
+scr_2 = t(u_2) %*% u_2
+#Test de Chow
+for(i in 5:(n_new-K-1)) {
+  print(sctest(y_2 ~ x_2, type = "Chow", point = i) )
+}
+# Pas d'autres ruptures observées
 
-# Test Cusum Square
-
+#Test de Cusum Square
 rr_2 <- (recresid(y_2 ~ x_2))
 rr_2 <- rr_2^2
 cumrr_2 <- cumsum(rr_2)/scr_2
 
-# Valeurs seuil de la distribution Cusum
-
-c0_2 = 0.23298 # cf table avec ici n-K = 18
+c0 = 0.23298 # cf table avec ici n_new-K = 19
 Kp1=K+1
 
-t2_2 = c(11:32)
+t2_2 <- ts(Kp1:n)
+t2_2 = c(Kp1:n_new)
 
-smin_2 <-((t2_2-K)/(n_2-K))-c0_2
-smax_2 <- ((t2_2-K)/(n_2-K))+c0_2
+smin_2 <-((t2_2-K)/(n_new-K))-c0
+smax_2 <- ((t2_2-K)/(n_new-K))+c0
 #
 
 vec2_2 <- c(smin_2, cumrr_2, smax_2)
 cusum2_2 <- matrix(vec2_2, ncol = 3); 
-matplot(t2_2, cusum2_2, type ="l")
+matplot(t2_2+rupture, cusum2_2, type ="l")
+
+
+
+
