@@ -29,6 +29,7 @@ K=k+1
 
 y=log(Y) 
 x=log(X)
+x = x[1:n,1:3]
 
 # Estimation MCO
 
@@ -91,6 +92,11 @@ dev.print(device= jpeg, file="acf.jpeg", width=600)
 Box.test(res, lag = 4, type = c( "Ljung-Box"), fitdf = 4)
 
 ##implémenter méthode de Cochrane-Orcutt pour obtenir les coeffs sans autocorrélation
+
+library(orcutt)
+coch = cochrane.orcutt(OLS)
+coch
+summary(coch)
 
 ## HOMOSCEDASTICITE ?
 
@@ -222,7 +228,5 @@ smax_2 <- ((t2_2-K)/(n_new-K))+c0
 vec2_2 <- c(smin_2, cumrr_2, smax_2)
 cusum2_2 <- matrix(vec2_2, ncol = 3); 
 matplot(t2_2+rupture, cusum2_2, type ="l")
-
-
 
 
