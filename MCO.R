@@ -74,6 +74,16 @@ lines(années, yf, col="blue", lty=2, lwd=2, type='o')  # Ajout des valeurs pré
 legend("topright", legend=c("valeurs observées", "prédiction"), col=c("green", "blue"), lty=c(1, 2), lwd=2)
 title(main="Valeurs observées et prédites")
 
+ybnd=c(0.9*range(log(X1))[1], 1.1*range(log(X1))[2])
+plot(années,log(X1),xlab="années",ylab="log(PIB/Pop1)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
+
+ybnd=c(0.9*range(log(X2))[1], 1.1*range(log(X2))[2])
+plot(années,log(X2),xlab="années",ylab="log(Pelec)-ajusté)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
+# On voit clairement une rupture --> c'est sur cette variable qu'on va créer une variable muette
+
+ybnd=c(0.9*range(log(X3))[1], 1.1*range(log(X3))[2])
+plot(années,log(X3),xlab="années",ylab="log(DJU)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
+
 ######################################################
 #####---------- TESTS SUR LE MODELE ---------#####
 ######################################################
@@ -106,7 +116,7 @@ for (j in 1:k) {
 ##### SUR LES ERREURS (NORMALITE avec espe nulle) ? -> CHAPITRE II #####
 
 
-ols_plot_resid_fit(OLS1) #residuals vs fitted values plot -> indique ok 
+#ols_plot_resid_fit(OLS1) #residuals vs fitted values plot -> indique ok 
 
 # Graphique des résidus
 dev.new()
@@ -114,8 +124,8 @@ ybnd=c(0.9*range(residuals(OLS1))[1], 1.1*range(residuals(OLS1))[2])
 plot(nobs,residuals(OLS1),xlab=" ",ylab="residuals",col="blue",xlim=xbnd,ylim=ybnd,type="l")
 title(main="Residuals")
 
-#library(olsrr)
-#ols_test_normality(OLS1)
+library(olsrr)
+ols_test_normality(OLS1)
 
 #QQ-Plot
 qqnorm(y=residuals(OLS1), xlab='Quantiles loi normales', ylab='Quantiles échantillon', main="QQ plot des résidus")
@@ -147,8 +157,8 @@ dw = d2/scr
 print (dw)
 # on obtient d=0.987 <= dU  ie il y'a autocorrelation positive ...
 # ou tester avec Ljung-box avec un lag de 1, 2, .... 
-?Box.test
-Box.test(residuals(OLS), lag = 1, type = "Ljung-Box")
+#?Box.test
+#Box.test(residuals(OLS), lag = 1, type = "Ljung-Box")
 ## p value élevée suggère absence d'autocorrelation 
 
 # ou tester avec Breusch-Godfrey avec un lag de 1, 2, .... 
@@ -164,21 +174,21 @@ acf(res, main="acf des résidus")
 dev.print(device= jpeg, file="acf.jpeg", width=600)
 # lag : déterminé à partir des graphes de PACF et ACF, ici 2! => modele AR(2) ? 
 # fitdf : K, ici 4
-Box.test(res, lag = 4, type = c( "Ljung-Box"), fitdf = 4)
+Box.test(res, lag = 4, type = c( "Ljung-Box"), fitdf = 3)
 
 
 ##implémenter méthode de Cochrane-Orcutt pour obtenir les coeffs sans autocorrélation
 
     # fonction intégrée
-library(orcutt)
-OLS_corrige = cochrane.orcutt(OLS)
-OLS_corrige
-summary(OLS_corrige)
+#library(orcutt)
+#OLS_corrige = cochrane.orcutt(OLS)
+#OLS_corrige
+#summary(OLS_corrige)
 #avec ce test, on a bien une valeur de d=2,9 comrise entre dU et 4-dU => absence d'autocorrelation
 
     # fonction manuelle, suivant les étapes dans le poly 
 cochrane_orcutt_moi <- function(OLS, seuil = 1e-4, max_iter = 100) {
-  # Initialisation
+   Initialisation
   iter <- 0
   diff <- seuil + 1  # Pour entrer dans la boucle
   residus <- residuals(OLS)  # Résidus initiaux du modèle OLS
@@ -216,22 +226,22 @@ cochrane_orcutt_moi <- function(OLS, seuil = 1e-4, max_iter = 100) {
 }
 
 # application de la méthode manuelle au modèle initial
-OLS_corrige_moi <- cochrane_orcutt_moi(OLS)
+#OLS_corrige_moi <- cochrane_orcutt_moi(OLS)
 
 # Résumé du modèle corrigé
-OLS_corrige_moi
-summary(OLS_corrige_moi$model)
+#OLS_corrige_moi
+#summary(OLS_corrige_moi$model)
 # re calcul de la statistique de Durbin Watson
-res_corr <- residuals(OLS_corrige_moi)  # Extraire les résidus corrigés
-n_corr <- length(res_corr)
-d1_1 = sum(res_corr^2)
-d2_1 =  t(res_corr[2:n_corr]-res_corr[1:n_corr-1]) %*% (res_corr[2:n_corr]-res_corr[1:n_corr-1])
-dw_1 = d2_1/d1_1
-print (dw_1)
+#res_corr <- residuals(OLS_corrige_moi)  # Extraire les résidus corrigés
+#n_corr <- length(res_corr)
+#d1_1 = sum(res_corr^2)
+#d2_1 =  t(res_corr[2:n_corr]-res_corr[1:n_corr-1]) %*% (res_corr[2:n_corr]-res_corr[1:n_corr-1])
+#dw_1 = d2_1/d1_1
+#print (dw_1)
 
 # Affichage de rho et nombre d'itérations
-cat("Rho:", OLS_corrige_moi$rho, "\n")
-cat("Nombre d'itérations:", OLS_corrige_moi$iterations, "\n")
+#cat("Rho:", OLS_corrige_moi$rho, "\n")
+#cat("Nombre d'itérations:", OLS_corrige_moi$iterations, "\n")
 
 
 
@@ -246,7 +256,7 @@ title(main="Residuals")
 
 #test de Breusch Pagan
 ?bptest
-bptest(modele)
+bptest(OLS1)
 
 # Regression auxiliaire de White 
 e2=res*res 
@@ -256,23 +266,25 @@ x1x3=X1*X3
 x2x3=X2*X3 
 WAUX=lm(formula = e2 ~ x+xcarre+x1x2+x1x3+x2x3) 
 summary(WAUX) 
-resw = WAUX$residuals
-SCRw = t(resw) %*% resw
-Rw = 1 - SCRw/(var(e2)*(n-1))
-Rw_sq = Rw^2
-print(n*Rw_sq)
+#resw = WAUX$residuals
+#SCRw = t(resw) %*% resw
+#Rw = 1 - SCRw/(var(e2)*(n-1))
+#Rw_sq = Rw^2
+#print(n*Rw_sq)
 # la valeur obtenue est inférieure à la valeur seuil chi-deux(9) pour alpha = 0.05 (=16.919), donc on ne rejette pas l'hyp. d'homoscédasticité
 
  # methode 2 de white avec bibliotheque
 library("skedastic")
-skedastic_package_white  <- white(mainlm =  OLS, interactions = TRUE)
+skedastic_package_white  <- white(mainlm =  OLS1, interactions = TRUE)
 skedastic_package_white
 # on obtient p=0,342, on peut donc pas rejeter H0 : absence d'heteroscedasticité
  # methode 3 
 bptest(OLS1, ~ fitted(OLS1) + I(fitted(OLS1)^2))
 
-
-
+#observation visuelle de l'homoscédasticité
+plot(fitted(OLS1), rstandard(OLS1), 
+     xlab = "Valeurs ajustées", ylab = "Résidus standardisés")
+abline(h = 0, col = "red")
 
 ## STABILITE TEMPORELLE
 
@@ -286,12 +298,12 @@ for(i in 5:(n-K-1)) {
   print(sctest(y ~ x, type = "Chow", point = i) )
 }
 
-# pour i = 11 (15), la stats de Fischer est la plus élevée
+# pour i = 19, la stats de Fischer est la plus élevée
 
 # Test Cusum
 
-Wr <- efp(y ~ x, type = "Rec-CUSUM")
-plot(Wr)
+#Wr <- efp(y ~ x, type = "Rec-CUSUM")
+#plot(Wr)
 # résultat inintéressant
 
 # Test Cusum Square
@@ -305,7 +317,7 @@ cumrr <- cumsum(rr)/scr
 c0 = 0.197 # cf table avec ici n-K = 28
 Kp1=K+1
 
-t2p <- ts(Kp1:n)
+#t2 <- ts(Kp1:n)
 t2 = c(5:32)
 
 smin <-((t2-K)/(n-K))-c0
@@ -315,13 +327,13 @@ smax <- ((t2-K)/(n-K))+c0
 vec2 <- c(smin, cumrr, smax)
 cusum2 <- matrix(vec2, ncol = 3); 
 matplot(t2, cusum2, type ="l")
-# rupture pour i = 10
-# on refait le test pour la régression de 1999 (i=10) à 2021
+# rupture pour i = 19
+# on refait le test pour la régression de 2008 (i=19) à 2021
 
 
 ## Test de rupture sur le 2è sous-échantillon
 
-rupture = 10
+rupture = 19
 #régression
 y_2 = y[rupture:n]
 x_2 = x[rupture:n,1:3]
@@ -342,7 +354,6 @@ scr_2 = t(u_2) %*% u_2
 for(i in 5:(n_new-K-1)) {
   print(sctest(y_2 ~ x_2, type = "Chow", point = i) )
 }
-# Pas d'autres ruptures observées
 
 #Test de Cusum Square
 rr_2 <- (recresid(y_2 ~ x_2))
@@ -363,4 +374,43 @@ vec2_2 <- c(smin_2, cumrr_2, smax_2)
 cusum2_2 <- matrix(vec2_2, ncol = 3); 
 matplot(t2_2+rupture, cusum2_2, type ="l")
 
+# nouvelle rupture pour i = 25, ie 2014
+
+rupture = 25
+#régression
+y_2 = y[rupture:n]
+x_2 = x[rupture:n,1:3]
+n_new = length(y_2)
+
+OLS_2=lm(formula = y_2 ~ x_2)
+summary(OLS_2)
+
+xc_2 = cbind(1,x_2) 
+xt_2 = t(xc_2)
+bmco_2 = OLS_2$coefficients 
+ycalc_2 = xc_2 %*% bmco_2
+xtx_2= xt_2 %*% xc_2
+xtx1_2 = solve(xtx_2) 
+u_2=y_2-xc_2%*%bmco_2
+scr_2 = t(u_2) %*% u_2
+
+
+#Test de Cusum Square
+rr_2 <- (recresid(y_2 ~ x_2))
+rr_2 <- rr_2^2
+cumrr_2 <- cumsum(rr_2)/scr_2
+
+c0 = 0.37359 # cf table avec ici n_new-K = 4
+Kp1=K+1
+
+t2_2 <- ts(Kp1:n)
+t2_2 = c(Kp1:n_new)
+
+smin_2 <-((t2_2-K)/(n_new-K))-c0
+smax_2 <- ((t2_2-K)/(n_new-K))+c0
+
+vec2_2 <- c(smin_2, cumrr_2, smax_2)
+cusum2_2 <- matrix(vec2_2, ncol = 3); 
+matplot(t2_2+rupture, cusum2_2, type ="l")
+# pas d'autre rupture
 

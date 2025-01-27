@@ -1,4 +1,4 @@
-# PREVISION en prenant en compte 1 rupture
+# PREVISION en prenant en compte 2 ruptures
 
 rm(list=ls())  # Effacer les donnees en memoire
 graphics.off() # Fermer les graphiques
@@ -23,7 +23,8 @@ n = n_y - n_test # nombre d'années utilisées pour la régression
 
 
 # Introduction de variables muettes
-rupture = 19 # cf fichier MCO à la fin
+rupture_1 = 19 # 1re rupture due à la libéralisation du marché après le traité de Lisbonne
+rupture_2 = 25 # 2è rupture due à l'essor des renouvelables ?
 
 # passage au log pour la régression
 vec <- c(X1,X2,X3)
@@ -35,12 +36,14 @@ y=log(Y)
 x=log(X)
 
 # création de la variable muette 
-muet_fin <- c(rep(0, rupture-1), rep(1, n_x - rupture + 1))
-x2_b <- muet_fin * log(X2)
+muet_fin <- c(rep(0, rupture_2-1), rep(1, n_x - rupture_2 + 1))
+muet_mid <- c(rep(0, rupture_1-1), rep(1, rupture_2 - rupture_1), rep(0, n_x - rupture_2 + 1))
+x2_1 <- muet_mid * log(X2)
+x2_2 <- muet_fin * log(X2)
 
 # création de la matrice de données utilisé pour la régression (on a ajouté la variable muette aux données de base)
-x_2 <- cbind(x,x2_b)
-x_2_reg <- x_2[1:n,1:(k+1)]
+x_2 <- cbind(x,x2_1, x2_2)
+x_2_reg <- x_2[1:n,1:(k+2)]
 y_reg <- y[1:n]
 
 # Estimation MCO
@@ -51,7 +54,7 @@ summary(OLS)
 bmco = OLS$coefficients
 
 # on en déduit les coefficients estimés pour les vrais variables (sans la muette)
-bmco_f <- c(bmco[1:2],bmco[3]+bmco[5], bmco[4])
+bmco_f <- c(bmco[1:2],bmco[3]+bmco[5]+bmco[6], bmco[4])
 print(bmco_f)
 
 # on calcule les y estimés et les résidus, en utilisant les données de base et les coefficients qu'on vient de calculer
