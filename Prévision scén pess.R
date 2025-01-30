@@ -1,4 +1,4 @@
-# PREVISION en prenant en compte 2 ruptures
+# PREVISION en prenant en compte 1 rupture
 
 rm(list=ls())  # Effacer les donnees en memoire
 graphics.off() # Fermer les graphiques
@@ -7,22 +7,24 @@ library(readxl)
 # Lecture des données
 
 donnees <- read_excel('données.xlsx')
+donnees_prev <- read_excel('donnees_prev.xlsx', sheet=1)
 attach(donnees)
+attach(donnees_prev)
 
 n_y = 32 # nombre d'années dans les données de base
 
 # Operations sur les variables
 Y <- (donnees$Celec_menages * 10^3)[1:n_y] / donnees$Pop1[1:n_y]  # Consommation en MWh par habitant
 X1 <- (donnees$PIB2020 * 10^9) / donnees$Pop1      # PIB réel en euros par habitantBASE 2020
-X2 <- donnees$Pelec / (donnees$`IPC(base100=2015)` / 100)  # Prix électricité corrigé en euro / MWh 
+X2 <- donnees$Pelec / (donnees$`IPC(base100=2015)` / 100)  # Prix électricité corrigé en euro / MWh
 X3 <- donnees$DJU                               # Indice climatique
 
 n_x = length(X1) # nombre d'années totales dans les variables explicatives(en comptant celles qu'on aura rajouté jusqu'à 2030)
 n_test = 4 # nombre d'années utilisées pour calculer la qualité de la prédiction
 n = n_y - n_test # nombre d'années utilisées pour la régression
 
-rupture_1 = 19 # 1re rupture due à la libéralisation du marché après le traité de Lisbonne
-rupture_2 = 25 # 2è rupture due à l'essor des renouvelables ?
+
+rupture = 19 # rupture en 2008 cf fichier MCO
 
 # Passage au log pour la régression
 vec <- c(X1,X2,X3)
@@ -33,15 +35,21 @@ K=k+1
 y=log(Y) 
 x=log(X)
 
-# Création de la variable muette 
-muet_fin <- c(rep(0, rupture_2-1), rep(1, n_x - rupture_2 + 1))
-muet_mid <- c(rep(0, rupture_1-1), rep(1, rupture_2 - rupture_1), rep(0, n_x - rupture_2 + 1))
-x4 <- muet_mid * log(X2)
-x5 <- muet_fin * log(X2)
+# Récupération des données prévisionnelles
+X1_prev <- donnees_prev$PIB_par_hab 
+X2_prev <- donnees_prev$Pelec_base_2015
+X3_prev <- donnees_prev$DJU 
+vec_p <- c(X1_prev,X2_prev,X3_prev)
+X_prev <- matrix(vec_p, ncol=3) 
+x_prev = log(X_prev)
 
-# Création de la matrice de données utilisé pour la régression (avec variables muettes)
-x_2 <- cbind(x,x4, x5)
-x_2_reg <- x_2[1:n,1:(k+2)]
+# Création de la variable muette 
+muet_fin <- c(rep(0, rupture-1), rep(1, n_x - rupture + 1))
+x2_b <- muet_fin * log(X2)
+
+# Création de la matrice de données utilisé pour la régression (avec variable muette)
+x_2 <- cbind(x,x2_b)
+x_2_reg <- x_2[1:n,1:(k+1)]
 y_reg <- y[1:n]
 
 # Estimation MCO
@@ -52,7 +60,7 @@ summary(OLS)
 bmco = OLS$coefficients
 
 # Calcul des coefficients pour les vrais variables (sans la muette)
-bmco_f <- c(bmco[1:2],bmco[3]+bmco[5]+bmco[6], bmco[4])
+bmco_f <- c(bmco[1:2],bmco[3]+bmco[5], bmco[4])
 print(bmco_f)
 
 # Estimation de la variable endogène à partir des coeffs qu'on vient d'estimer, et calcul des résidus
@@ -107,4 +115,33 @@ cat("RMSE", rmse, "\n")
 cat("MAE", mae, "\n")
 cat("MAPE", mape, "%", "\n")
 
-# On ne va pas plus loin car on ne conserve pas ce modèle
+
+##prédiciton de 2022 à 2030
+
+
+nprev = n_x - n_y # =9, de 2022 à 2030
+for(j in 1:nprev){
+  xf<-x_prev[j,1:3]
+  nvx <-matrix(c(1,xf))
+  nvx1 = t(nvx);
+  nvy= nvx1 %*% bmco_f
+  #
+  # Ecart-type de prevision
+  #
+  sprev= sqrt( (scr/(n-K)) * (1+ nvx1 %*% xtx1 %*% nvx ))
+  print(xf)
+  #
+  # Intervalle de prédiction MCO - Borne inf et sup à 95%
+  
+  # T de Student 
+  #
+  tstud=qt(0.975,n-K)
+  #
+  prevymin=nvy-tstud*sprev
+  prevymax=nvy+tstud*sprev
+  
+  # Affichage 
+  
+  cat("Intervalles de confiance",2021 +j, ":",exp(nvy)*1e3, exp(prevymin)*1e3, exp(prevymax)*1e3,sprev, "\n")
+}
+

@@ -31,7 +31,7 @@ ggplot(donnees, aes(x = Date, y = Celec_menages/Pop1*10**6)) +
 # Operations sur les variables
 Y <- (donnees$Celec_menages * 10^3) / donnees$Pop1  # Consommation en MWh par habitant
 X1 <- (donnees$PIB2020 * 10^9) / donnees$Pop1      # PIB réel en euros par habitantBASE 2020
-X2 <- donnees$Pelec / (donnees$`IPC(base100=2015)` / 100)  # Prix électricité corrigé en euro / MWh / hab
+X2 <- donnees$Pelec / (donnees$`IPC(base100=2015)` / 100)  # Prix électricité corrigé en euro / MWh 
 X3 <- donnees$DJU                               # Indice climatique
 
 n <- length(Y)  # Nombre d'observations
@@ -77,8 +77,8 @@ title(main="Valeurs observées et prédites")
 ybnd=c(0.9*range(log(X1))[1], 1.1*range(log(X1))[2])
 plot(années,log(X1),xlab="années",ylab="log(PIB/Pop1)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
 
-ybnd=c(0.9*range(log(X2))[1], 1.1*range(log(X2))[2])
-plot(années,log(X2),xlab="années",ylab="log(Pelec)-ajusté)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
+ybnd=c(0.9*range(X2)[1], 1.1*range(X2)[2])
+plot(années,X2,xlab="années",ylab="Pelec (€/MWh - base 2015)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
 # On voit clairement une rupture --> c'est sur cette variable qu'on va créer une variable muette
 
 ybnd=c(0.9*range(log(X3))[1], 1.1*range(log(X3))[2])
@@ -326,7 +326,7 @@ smax <- ((t2-K)/(n-K))+c0
 
 vec2 <- c(smin, cumrr, smax)
 cusum2 <- matrix(vec2, ncol = 3); 
-matplot(t2, cusum2, type ="l")
+matplot(t2+1989, cusum2, xlab ="années",  type ="l")
 # rupture pour i = 19
 # on refait le test pour la régression de 2008 (i=19) à 2021
 
@@ -356,11 +356,11 @@ for(i in 5:(n_new-K-1)) {
 }
 
 #Test de Cusum Square
-rr_2 <- (recresid(y_2 ~ x_2))
+rr_2 <- recresid(y_2 ~ x_2)
 rr_2 <- rr_2^2
 cumrr_2 <- cumsum(rr_2)/scr_2
 
-c0 = 0.23298 # cf table avec ici n_new-K = 19
+c0 = 0.30221 # cf table avec ici n_new-K = 10
 Kp1=K+1
 
 t2_2 <- ts(Kp1:n)
@@ -372,7 +372,7 @@ smax_2 <- ((t2_2-K)/(n_new-K))+c0
 
 vec2_2 <- c(smin_2, cumrr_2, smax_2)
 cusum2_2 <- matrix(vec2_2, ncol = 3); 
-matplot(t2_2+rupture, cusum2_2, type ="l")
+matplot(t2_2+2007, cusum2_2, xlab ="années",  type ="l")
 
 # nouvelle rupture pour i = 25, ie 2014
 
@@ -410,7 +410,7 @@ smin_2 <-((t2_2-K)/(n_new-K))-c0
 smax_2 <- ((t2_2-K)/(n_new-K))+c0
 
 vec2_2 <- c(smin_2, cumrr_2, smax_2)
-cusum2_2 <- matrix(vec2_2, ncol = 3); 
-matplot(t2_2+rupture, cusum2_2, type ="l")
+cusum2_3 <- matrix(vec2_2, ncol = 3); 
+matplot(t2_2+2013, cusum2_3, xlab ="années",  type ="l")
 # pas d'autre rupture
 

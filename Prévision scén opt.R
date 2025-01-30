@@ -7,14 +7,16 @@ library(readxl)
 # Lecture des données
 
 donnees <- read_excel('données.xlsx')
+donnees_prev <- read_excel('donnees_prev.xlsx', sheet=2)
 attach(donnees)
+attach(donnees_prev)
 
 n_y = 32 # nombre d'années dans les données de base
 
 # Operations sur les variables
 Y <- (donnees$Celec_menages * 10^3)[1:n_y] / donnees$Pop1[1:n_y]  # Consommation en MWh par habitant
 X1 <- (donnees$PIB2020 * 10^9) / donnees$Pop1      # PIB réel en euros par habitantBASE 2020
-X2 <- donnees$Pelec / (donnees$`IPC(base100=2015)` / 100)  # Prix électricité corrigé en euro / MWh / hab
+X2 <- donnees$Pelec / (donnees$`IPC(base100=2015)` / 100)  # Prix électricité corrigé en euro / MWh
 X3 <- donnees$DJU                               # Indice climatique
 
 n_x = length(X1) # nombre d'années totales dans les variables explicatives(en comptant celles qu'on aura rajouté jusqu'à 2030)
@@ -22,10 +24,9 @@ n_test = 4 # nombre d'années utilisées pour calculer la qualité de la prédic
 n = n_y - n_test # nombre d'années utilisées pour la régression
 
 
-# Introduction de variables muettes
-rupture = 19 # cf fichier MCO à la fin
+rupture = 19 # rupture en 2008 cf fichier MCO
 
-# passage au log pour la régression
+# Passage au log pour la régression
 vec <- c(X1,X2,X3)
 X <- matrix(vec, ncol=3) 
 Y=matrix(Y,n_y,1)
@@ -34,11 +35,19 @@ K=k+1
 y=log(Y) 
 x=log(X)
 
-# création de la variable muette 
+# Récupération des données prévisionnelles
+X1_prev <- donnees_prev$PIB_par_hab 
+X2_prev <- donnees_prev$Pelec_base_2015
+X3_prev <- donnees_prev$DJU 
+vec_p <- c(X1_prev,X2_prev,X3_prev)
+X_prev <- matrix(vec_p, ncol=3) 
+x_prev = log(X_prev)
+
+# Création de la variable muette 
 muet_fin <- c(rep(0, rupture-1), rep(1, n_x - rupture + 1))
 x2_b <- muet_fin * log(X2)
 
-# création de la matrice de données utilisé pour la régression (on a ajouté la variable muette aux données de base)
+# Création de la matrice de données utilisé pour la régression (avec variable muette)
 x_2 <- cbind(x,x2_b)
 x_2_reg <- x_2[1:n,1:(k+1)]
 y_reg <- y[1:n]
@@ -50,11 +59,11 @@ OLS=lm(formula = y_reg ~ x_2_reg)
 summary(OLS)
 bmco = OLS$coefficients
 
-# on en déduit les coefficients estimés pour les vrais variables (sans la muette)
+# Calcul des coefficients pour les vrais variables (sans la muette)
 bmco_f <- c(bmco[1:2],bmco[3]+bmco[5], bmco[4])
 print(bmco_f)
 
-# on calcule les y estimés et les résidus, en utilisant les données de base et les coefficients qu'on vient de calculer
+# Estimation de la variable endogène à partir des coeffs qu'on vient d'estimer, et calcul des résidus
 x_reg <- x[1:n,1:k]
 xc = cbind(1,x_reg)
 xt = t(xc)
@@ -65,7 +74,7 @@ u = y_reg - yf
 scr = t(u) %*% u
 
 
-## Calcul d'indcateurs de qualité de la prédiction qu'on veut faire avec cette régression
+## Calcul d'indicateurs de qualité de la prédiction
 
 rmse=0
 mae=0
@@ -112,8 +121,7 @@ cat("MAPE", mape, "%", "\n")
 
 nprev = n_x - n_y # =9, de 2022 à 2030
 for(j in 1:nprev){
-  xf<-x[n_y+j,1:3]
-  yfobs<-y[n_y+j]
+  xf<-x_prev[j,1:3]
   nvx <-matrix(c(1,xf))
   nvx1 = t(nvx);
   nvy= nvx1 %*% bmco_f
@@ -135,6 +143,6 @@ for(j in 1:nprev){
   
   # Affichage 
   
-  cat("Intervalles de confiance",2021 +j, ":",nvy, prevymin, prevymax,sprev, "\n")
+  cat("Intervalles de confiance",2021 +j, ":",exp(nvy)*1e3, exp(prevymin)*1e3, exp(prevymax)*1e3,sprev, "\n")
 }
 
