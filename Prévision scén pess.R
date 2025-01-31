@@ -6,7 +6,7 @@ library(readxl)
 
 # Lecture des données
 
-donnees <- read_excel('données.xlsx')
+donnees <- read_excel('données-conso_elec.xlsx')
 donnees_prev <- read_excel('donnees_prev.xlsx', sheet=1)
 attach(donnees)
 attach(donnees_prev)
@@ -118,13 +118,16 @@ cat("MAPE", mape, "%", "\n")
 
 ##prédiciton de 2022 à 2030
 
-
-nprev = n_x - n_y # =9, de 2022 à 2030
+Pop <- Population
+nprev = length(X1_prev) # =9, de 2022 à 2030
+y_prev <- rep(0,nprev)
 for(j in 1:nprev){
   xf<-x_prev[j,1:3]
   nvx <-matrix(c(1,xf))
   nvx1 = t(nvx);
   nvy= nvx1 %*% bmco_f
+  pop = Pop[j]*1e6
+  y_prev[j] = nvy
   #
   # Ecart-type de prevision
   #
@@ -142,6 +145,20 @@ for(j in 1:nprev){
   
   # Affichage 
   
-  cat("Intervalles de confiance",2021 +j, ":",exp(nvy)*1e3, exp(prevymin)*1e3, exp(prevymax)*1e3,sprev, "\n")
+  cat("Intervalles de confiance",2021 +j, ":",exp(nvy)*1e-3*pop, exp(prevymin)*1e-3*pop, exp(prevymax)*1e-3*pop,sprev, "\n")
 }
+
+
+Années <- c(Date,Année)
+Y_prev = exp(y_prev)
+Y_prol = c(Y,Y_prev)
+Y_print = Y_prol*1e3
+ybnd=c(0.9*range(Y_print)[1], 1.1*range(Y_print)[2])
+plot(Années,Y_print,xlab="années",ylab="Consommation/hab (kWh)",col="red",xlim=range(Années),ylim=ybnd,type="p", lwd=2)
+
+Conso_prev <- (Y_prev*1e-3) * (Pop*1e6) # car Y_prev est en MWh/hab et Pop en Millions d'habitants
+Conso <- Celec_menages
+Conso_prol <- c(Conso,Conso_prev)
+ybnd=c(0.9*range(Conso_prol)[1], 1.1*range(Conso_prol)[2])
+plot(Années,Conso_prol,xlab="années",ylab="Consommation (GWh)",col="red",xlim=range(Années),ylim=ybnd,type="p", lwd=2)
 

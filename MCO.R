@@ -81,8 +81,8 @@ ybnd=c(0.9*range(X2)[1], 1.1*range(X2)[2])
 plot(années,X2,xlab="années",ylab="Pelec (€/MWh - base 2015)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
 # On voit clairement une rupture --> c'est sur cette variable qu'on va créer une variable muette
 
-ybnd=c(0.9*range(log(X3))[1], 1.1*range(log(X3))[2])
-plot(années,log(X3),xlab="années",ylab="log(DJU)",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
+ybnd=c(0.9*range(X3)[1], 1.1*range(X3)[2])
+plot(années,X3,xlab="années",ylab="DJU",col="red",xlim=range(années),ylim=ybnd,type="p", lwd=2)
 
 ######################################################
 #####---------- TESTS SUR LE MODELE ---------#####
