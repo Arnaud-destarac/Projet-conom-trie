@@ -94,6 +94,9 @@ library(corrplot)
 # Calcul de la matrice de corrélation (log des variables explicatives)
 correlation_matrix <- cor(x)
 correlation_matrix
+
+library(corrplot)
+corrplot(correlation_matrix, method = "circle", type = "upper", tl.col = "black", tl.srt = 90)
 ## coefficients de correlation entre les variables x peu eleves en valeur absolue ie inférieurs à 1, c'est bon signe 
 
 # Calcul du VIF (Variance Inflation Factor) : 1ere methode
