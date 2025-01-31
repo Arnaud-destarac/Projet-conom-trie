@@ -1,5 +1,7 @@
 # PREVISION en prenant en compte 1 rupture
 
+####SCENARIO "Pessimiste" : même fichier que "Prévision scén opt.R" sauf en ligne 12, ici sheet 1
+
 rm(list=ls())  # Effacer les donnees en memoire
 graphics.off() # Fermer les graphiques
 library(readxl)
@@ -148,6 +150,7 @@ for(j in 1:nprev){
   cat("Intervalles de confiance",2021 +j, ":", exp(prevymin)*1e-3*pop, exp(nvy)*1e-3*pop, exp(prevymax)*1e-3*pop,sprev, "\n")
 }
 
+# Plot des résultats de prédiction
 
 Années <- c(Date,Année)
 Y_prev = exp(y_prev)

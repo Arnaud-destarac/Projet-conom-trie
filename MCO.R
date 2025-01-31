@@ -62,7 +62,7 @@ yf = xc %*% bhat
 res = y - yf                        #=residuals(OLS)   plus simple
 scr <- sum(residuals(OLS1)^2)
 
-# Graphique de la serie Y(i) en fonction de i(années)
+# Graphique de la serie Y(i) et des X(i) en fonction de i(années)
 nobs=cbind(1:n)
 années = 1990:2021
 
@@ -97,7 +97,7 @@ correlation_matrix
 
 library(corrplot)
 corrplot(correlation_matrix, method = "circle", type = "upper", tl.col = "black", tl.srt = 90)
-## coefficients de correlation entre les variables x peu eleves en valeur absolue ie inférieurs à 1, c'est bon signe 
+## coefficients de correlation entre les variables x peu eleves en valeur absolue, c'est bon signe 
 
 # Calcul du VIF (Variance Inflation Factor) : 1ere methode
 vif_results <- vif(OLS1)
@@ -138,16 +138,6 @@ qqline(residuals(OLS1), col = "red", lwd = 2)  # Ajout d'une ligne de référenc
 # Histogramme des résidus 
 dev.new()
 hist(residuals(OLS1))
-## ouais ok 
-
-#test de shapiro 
-#shapiro.test(residuals(OLS1))
-# p value de ~0.32 => on rejette pas H0 : les residus suivent une loi normale 
-
-# Test de Kolomorov-Smirnov
-#?ks.test
-#ks.test(x=res,y="pnorm",mean=0, sd=5.905)
-# blabla
 
 
 ##### SUR L' AUTOCORRELATION ->  #####
@@ -158,94 +148,22 @@ d1 = scr
 d2 =  t(res[2:n]-res[1:n-1]) %*% (res[2:n]-res[1:n-1])
 dw = d2/scr
 print (dw)
-# on obtient d=0.987 <= dU  ie il y'a autocorrelation positive ...
-# ou tester avec Ljung-box avec un lag de 1, 2, .... 
-#?Box.test
-#Box.test(residuals(OLS), lag = 1, type = "Ljung-Box")
-## p value élevée suggère absence d'autocorrelation 
 
-# ou tester avec Breusch-Godfrey avec un lag de 1, 2, .... 
-bgtest(OLS1, order = 1) 
-## p value élevée suggère absence d'autocorrelation 
-
-# Test de Ljung-Box
 
 #Pour savoir le nombre de retards (lags) indiqués dans le test Ljung-Box
 pacf(res, main="pacf des résidus")
 dev.print(device= jpeg, file="pacf.jpeg", width=600)
 acf(res, main="acf des résidus")
 dev.print(device= jpeg, file="acf.jpeg", width=600)
-# lag : déterminé à partir des graphes de PACF et ACF, ici 2! => modele AR(2) ? 
-# fitdf : K, ici 4
-Box.test(res, lag = 4, type = c( "Ljung-Box"), fitdf = 3)
 
+# Test de Ljung-Box
+# lag : déterminé à partir des graphes de PACF et ACF
+# fitdf : K, ici 4 --> Ljung-Box pas possible
+#Box.test(res, lag = 4, type = c( "Ljung-Box"), fitdf = 3)
 
-##implémenter méthode de Cochrane-Orcutt pour obtenir les coeffs sans autocorrélation
-
-    # fonction intégrée
-#library(orcutt)
-#OLS_corrige = cochrane.orcutt(OLS)
-#OLS_corrige
-#summary(OLS_corrige)
-#avec ce test, on a bien une valeur de d=2,9 comrise entre dU et 4-dU => absence d'autocorrelation
-
-    # fonction manuelle, suivant les étapes dans le poly 
-cochrane_orcutt_moi <- function(OLS, seuil = 1e-4, max_iter = 100) {
-   Initialisation
-  iter <- 0
-  diff <- seuil + 1  # Pour entrer dans la boucle
-  residus <- residuals(OLS)  # Résidus initiaux du modèle OLS
-  y_current <- y  # Variable dépendante
-  x_current <- x  # Variables explicatives
-  while (diff > seuil && iter < max_iter) {
-    # Étape 2 : Calcul de rho_chapeau
-    rho_chap <- sum(residus[-1] * residus[-length(residus)]) / sum(residus^2)
-    
-    # Étape 3 : Transformation des variables (données différenciées)
-    y_trans <- y_current[-1] - rho_chap * y_current[-length(y_current)]
-    X_trans <- x_current[-1, ] - rho_chap * x_current[-nrow(x_current), ]
-    
-    # Étape 4 : Régression des variables transformées
-    model_trans <- lm(y_trans ~ X_trans - 1)  # Régression sans intercept (X_trans contient déjà l'intercept ajusté)
-    
-    # Mise à jour des résidus
-    new_residus <- residuals(model_trans)
-    
-    # Calcul de la différence entre rho courant et précédent (critère de convergence)
-    diff <- abs(rho_chap - sum(new_residus[-1] * new_residus[-length(new_residus)]) / sum(new_residus^2))
-    
-    # Mise à jour pour la prochaine itération
-    residus <- new_residus
-    iter <- iter + 1
-  }
-  
-  # Résultats finaux
-  list(
-    model = model_trans,
-    rho = rho_chap,
-    iterations = iter,
-    converged = iter < max_iter
-  )
-}
-
-# application de la méthode manuelle au modèle initial
-#OLS_corrige_moi <- cochrane_orcutt_moi(OLS)
-
-# Résumé du modèle corrigé
-#OLS_corrige_moi
-#summary(OLS_corrige_moi$model)
-# re calcul de la statistique de Durbin Watson
-#res_corr <- residuals(OLS_corrige_moi)  # Extraire les résidus corrigés
-#n_corr <- length(res_corr)
-#d1_1 = sum(res_corr^2)
-#d2_1 =  t(res_corr[2:n_corr]-res_corr[1:n_corr-1]) %*% (res_corr[2:n_corr]-res_corr[1:n_corr-1])
-#dw_1 = d2_1/d1_1
-#print (dw_1)
-
-# Affichage de rho et nombre d'itérations
-#cat("Rho:", OLS_corrige_moi$rho, "\n")
-#cat("Nombre d'itérations:", OLS_corrige_moi$iterations, "\n")
-
+# ou tester avec Breusch-Godfrey avec un lag de 1, 2, .... 
+bgtest(OLS1, order = 1) 
+## p value élevée suggère absence d'autocorrelation 
 
 
 ##### SUR HOMOSCEDASTICITE ? #####
@@ -269,25 +187,18 @@ x1x3=X1*X3
 x2x3=X2*X3 
 WAUX=lm(formula = e2 ~ x+xcarre+x1x2+x1x3+x2x3) 
 summary(WAUX) 
-#resw = WAUX$residuals
-#SCRw = t(resw) %*% resw
-#Rw = 1 - SCRw/(var(e2)*(n-1))
-#Rw_sq = Rw^2
-#print(n*Rw_sq)
-# la valeur obtenue est inférieure à la valeur seuil chi-deux(9) pour alpha = 0.05 (=16.919), donc on ne rejette pas l'hyp. d'homoscédasticité
 
  # methode 2 de white avec bibliotheque
 library("skedastic")
 skedastic_package_white  <- white(mainlm =  OLS1, interactions = TRUE)
 skedastic_package_white
 # on obtient p=0,342, on peut donc pas rejeter H0 : absence d'heteroscedasticité
- # methode 3 
-bptest(OLS1, ~ fitted(OLS1) + I(fitted(OLS1)^2))
 
 #observation visuelle de l'homoscédasticité
 plot(fitted(OLS1), rstandard(OLS1), 
      xlab = "Valeurs ajustées", ylab = "Résidus standardisés")
 abline(h = 0, col = "red")
+
 
 ## STABILITE TEMPORELLE
 
@@ -303,13 +214,8 @@ for(i in 5:(n-K-1)) {
 
 # pour i = 19, la stats de Fischer est la plus élevée
 
-# Test Cusum
 
-#Wr <- efp(y ~ x, type = "Rec-CUSUM")
-#plot(Wr)
-# résultat inintéressant
-
-# Test Cusum Square
+## Test Cusum Square
 
 rr <- (recresid(y ~ x))
 rr <- rr^2
