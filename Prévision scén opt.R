@@ -154,9 +154,9 @@ for(j in 1:nprev){
 
 Années <- c(Date,Année)
 Y_prev = exp(y_prev)
-Conso_prev <- (Y_prev*1e-3) * (Pop*1e6) # car Y_prev est en MWh/hab et Pop en Millions d'habitants
+Conso_prev_1 <- (Y_prev*1e-3) * (Pop*1e6) # car Y_prev est en MWh/hab et Pop en Millions d'habitants
 Conso <- Celec_menages
-Conso_prol <- c(Conso,Conso_prev)
+Conso_prol_1 <- c(Conso,Conso_prev_1)
 
 ybnd=c(0.9*range(Conso_prol)[1], 1.1*range(Conso_prol)[2])
 plot(Années,Conso_prol,xlab="années",ylab="Consommation (GWh)",col="red",xlim=range(Années),ylim=ybnd,type="p", lwd=2)
